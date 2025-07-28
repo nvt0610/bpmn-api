@@ -1,17 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Lấy id kế tiếp
-const getNextId = async (model) => {
-    const items = await model.findMany({ select: { id: true }, orderBy: { id: 'asc' } });
-    let nextId = 1;
-    for (const item of items) {
-        if (item.id > nextId) break;
-        nextId = item.id + 1;
-    }
-    return nextId;
-};
-
 // GET all role views for a diagram
 const getRoleViewsByDiagram = async (req, res) => {
     try {
@@ -35,11 +24,8 @@ const createRoleView = async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        const nextId = await getNextId(prisma.diagramRoleView); // 👈 dùng chung
-
         const data = await prisma.diagramRoleView.create({
             data: {
-                id: nextId,
                 diagramId,
                 userId,
                 nodeId,

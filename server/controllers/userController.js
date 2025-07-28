@@ -32,19 +32,8 @@ const createUser = async (req, res) => {
   }
 
   try {
-    const existing = await prisma.user.findMany({
-      select: { id: true },
-      orderBy: { id: 'asc' }
-    });
-
-    let nextId = 1;
-    for (const u of existing) {
-      if (u.id > nextId) break;
-      nextId = u.id + 1;
-    }
-
     const user = await prisma.user.create({
-      data: { id: nextId, username, email, password, roleId }
+      data: { username, email, password, roleId }
     });
 
     res.status(201).json(user);

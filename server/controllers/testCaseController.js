@@ -33,28 +33,26 @@ const getTestCaseById = async (req, res) => {
 // POST create
 const createTestCase = async (req, res) => {
   try {
-    const { name, description, diagramId, createdBy, type } = req.body;
+    const { name, description, diagramId, createdBy, type, status } = req.body;
 
     if (!createdBy) return res.status(400).json({ error: 'Missing createdBy' });
 
     const validTypes = ['GENERAL', 'ROLE_BASED'];
+    const validStatuses = ['DRAFT', 'SUBMITTED', 'CANCELLED', 'DONE'];
+
     const finalType = validTypes.includes(type) ? type : 'GENERAL';
-
-    const existing = await prisma.testCase.findMany({
-      select: { id: true },
-      orderBy: { id: 'asc' },
-    });
-
-    let nextId = 1;
-    for (const tc of existing) {
-      if (tc.id > nextId) break;
-      nextId = tc.id + 1;
-    }
+    const finalStatus = validStatuses.includes(status) ? status : 'DRAFT';
 
     const data = await prisma.testCase.create({
-      data: { id: nextId, name, description, diagramId, createdBy, type: finalType }
+      data: {
+        name,
+        description,
+        diagramId,
+        createdBy,
+        type: finalType,
+        status: finalStatus
+      }
     });
-
     res.json(data);
   } catch (err) {
     console.error('🔥 Lỗi khi tạo test case:', err); // 👈 BẮT BUỘC THÊM DÒNG NÀY
@@ -64,16 +62,31 @@ const createTestCase = async (req, res) => {
 
 // PUT update
 const updateTestCase = async (req, res) => {
-  const { name, diagramId, description, type } = req.body;
+  try {
+    const { name, diagramId, description, type, status } = req.body;
 
-  const validTypes = ['GENERAL', 'ROLE_BASED'];
-  const finalType = validTypes.includes(type) ? type : undefined;
+    const validTypes = ['GENERAL', 'ROLE_BASED'];
+    const validStatuses = ['DRAFT', 'SUBMITTED', 'CANCELLED', 'DONE'];
 
-  const data = await prisma.testCase.update({
-    where: { id: parseInt(req.params.id) },
-    data: { name, diagramId, description, ...(finalType && { type: finalType }) }
-  });
-  res.json(data);
+    const finalType = validTypes.includes(type) ? type : undefined;
+    const finalStatus = validStatuses.includes(status) ? status : undefined;
+
+    const data = await prisma.testCase.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        name,
+        diagramId,
+        description,
+        ...(finalType && { type: finalType }),
+        ...(finalStatus && { status: finalStatus })
+      }
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('🔥 Lỗi khi cập nhật test case:', err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // DELETE

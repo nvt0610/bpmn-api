@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id               Int                @id
+  id               Int                @id @default(autoincrement())
   username         String             @unique
   email            String             @unique
   password         String
@@ -20,7 +20,7 @@ model User {
 }
 
 model Role {
-  id              Int                @id
+  id              Int                @id @default(autoincrement())
   name            String             @unique
   users           User[]
   POTestCaseData  POTestCaseData[]
@@ -29,7 +29,7 @@ model Role {
 }
 
 model BpmnDiagram {
-  id         Int               @id
+  id         Int               @id @default(autoincrement())
   name       String
   xmlContent String
   createdAt  DateTime          @default(now())
@@ -42,7 +42,7 @@ model BpmnDiagram {
 }
 
 model DiagramRoleView {
-  id         Int         @id
+  id         Int         @id @default(autoincrement())
   diagramId  Int
   userId     Int
   nodeId     String
@@ -57,7 +57,7 @@ model DiagramRoleView {
 }
 
 model TestCase {
-  id        Int          @id
+  id        Int          @id @default(autoincrement())
   name      String
   createdAt DateTime     @default(now())
   diagramId Int?
@@ -66,6 +66,7 @@ model TestCase {
   creator   User         @relation("TestCaseCreatedBy", fields: [createdBy], references: [id])
   diagram   BpmnDiagram? @relation("DiagramTestCases", fields: [diagramId], references: [id])
   type        VisibilityType
+  status      TestCaseStatus    @default(DRAFT) // ✅ mới thêm
 
   poData  POTestCaseData[]
   devData DevTestCaseData[]
@@ -73,7 +74,7 @@ model TestCase {
 }
 
 model POTestCaseData {
-  id          Int      @id
+  id          Int      @id @default(autoincrement())
   testCaseId  Int
   nodeId      String?   // 👈 thêm field nodeId
   description String
@@ -87,7 +88,7 @@ model POTestCaseData {
 }
 
 model DevTestCaseData {
-  id         Int      @id
+  id         Int      @id @default(autoincrement())
   testCaseId Int
   nodeId     String?
   apis       Json
@@ -100,11 +101,11 @@ model DevTestCaseData {
 }
 
 model QCTestCaseData {
-  id          Int      @id
+  id          Int      @id @default(autoincrement())
   testCaseId  Int
   nodeId      String?   // 👈 thêm
   roleId      Int?
-  apis        Json
+  scenarios        Json
 
   testCase TestCase @relation(fields: [testCaseId], references: [id])
   role     Role?    @relation(fields: [roleId], references: [id])
@@ -115,4 +116,10 @@ model QCTestCaseData {
 enum VisibilityType {
   GENERAL
   ROLE_BASED
+}
+enum TestCaseStatus {
+  DRAFT
+  IN_PROGRESS
+  DONE
+  REJECTED
 }

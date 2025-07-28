@@ -1,0 +1,14 @@
+{
+  "apis": [
+    {
+      "name": "",
+      "url": "",
+      "method": "",   
+      "pathParams": {},
+      "queryParams": {},
+      "header": {},
+      "body": {},
+      "expectedResponse": {}
+    }
+  ]
+}

@@ -70,20 +70,8 @@ const createDiagram = async (req, res) => {
       return res.status(400).json({ error: 'Invalid diagram type' });
     }
 
-    const existing = await prisma.bpmnDiagram.findMany({
-      select: { id: true },
-      orderBy: { id: 'asc' }
-    });
-
-    let nextId = 1;
-    for (const d of existing) {
-      if (d.id > nextId) break;
-      nextId = d.id + 1;
-    }
-
     const data = await prisma.bpmnDiagram.create({
       data: {
-        id: nextId,
         name,
         xmlContent,
         type,

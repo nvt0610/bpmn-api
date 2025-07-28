@@ -1,17 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Lấy id kế tiếp
-const getNextId = async (model) => {
-  const items = await model.findMany({ select: { id: true }, orderBy: { id: 'asc' } });
-  let nextId = 1;
-  for (const item of items) {
-    if (item.id > nextId) break;
-    nextId = item.id + 1;
-  }
-  return nextId;
-};
-
 // Trả ra { name, id } từ role name hoặc role id
 const resolveRoleInfo = async (rawRole) => {
   let roleName = rawRole?.toString().trim().toLowerCase();
@@ -32,33 +21,27 @@ const resolveRoleInfo = async (rawRole) => {
 const modelMap = {
   po: {
     model: prisma.pOTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'description', 'params', 'attachments', 'roleId'],
-    updateFields: ['description', 'params', 'attachments', 'nodeId'],
+    createFields: ['testCaseId', 'nodeId', 'description', 'attachments', 'roleId'],
+    updateFields: ['description', 'attachments', 'nodeId'],
     validators: {
-      params: Array.isArray,
-      attachments: Array.isArray
+      attachments: Array.isArray,
+      description: (val) => typeof val === 'string'
     }
   },
   dev: {
     model: prisma.devTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'apis', 'roleId', 'method', 'body', 'response'],
-    updateFields: ['apis', 'nodeId', 'method', 'body', 'response'],
+    createFields: ['testCaseId', 'nodeId', 'apis', 'roleId'],
+    updateFields: ['apis', 'nodeId'],
     validators: {
-      apis: Array.isArray,
-      body: (val) => typeof val === 'object',
-      response: (val) => typeof val === 'object',
-      method: (val) => typeof val === 'string'
+      apis: (val) => typeof val === 'object'
     }
   },
   qc: {
     model: prisma.qCTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'scenarios', 'paramInputs', 'expected', 'apis', 'roleId'],
-    updateFields: ['scenarios', 'paramInputs', 'expected', 'apis', 'nodeId'],
+    createFields: ['testCaseId', 'nodeId', 'scenarios', 'roleId'],
+    updateFields: ['scenarios', 'nodeId'],
     validators: {
-      scenarios: Array.isArray,
-      paramInputs: Array.isArray,
-      expected: Array.isArray,
-      apis: (val) => typeof val === 'object'
+      scenarios: (val) => typeof val === 'object' || Array.isArray(val)
     }
   }
 };
@@ -86,7 +69,6 @@ const createExtra = async (req, res) => {
   }
 
   try {
-    dataInput.id = await getNextId(config.model);
     const created = await config.model.create({ data: dataInput });
     res.json(created);
   } catch (err) {
