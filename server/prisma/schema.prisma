@@ -70,6 +70,7 @@ model TestCase {
   poData  POTestCaseData[]
   devData DevTestCaseData[]
   QCData  QCTestCaseData[]
+  workflows TestCaseWorkflow[] 
 }
 
 model POTestCaseData {
@@ -115,4 +116,18 @@ model QCTestCaseData {
 enum VisibilityType {
   GENERAL
   ROLE_BASED
+}
+
+
+model TestCaseWorkflow {
+  id           Int       @id @default(autoincrement())
+  
+  testCaseId   Int
+  testCase     TestCase  @relation(fields: [testCaseId], references: [id])
+
+  workflowId   String    @db.VarChar(100) // ID from n8n
+
+
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
 }
