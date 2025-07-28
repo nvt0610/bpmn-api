@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int                @id
+  username         String             @unique
+  email            String             @unique
+  password         String
+  roleId           Int
+  createdDiagrams  BpmnDiagram[]      @relation("DiagramCreatedBy")
+  diagrams         DiagramRoleView[]
+  createdTestCases TestCase[]         @relation("TestCaseCreatedBy")
+  role             Role               @relation(fields: [roleId], references: [id])
+}
+
+model Role {
+  id              Int                @id
+  name            String             @unique
+  users           User[]
+  POTestCaseData  POTestCaseData[]
+  DevTestCaseData DevTestCaseData[]
+  QCTestCaseData  QCTestCaseData[]
+}
+
+model BpmnDiagram {
+  id         Int               @id
+  name       String
+  xmlContent String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  createdBy  Int
+  type       VisibilityType
+  creator    User              @relation("DiagramCreatedBy", fields: [createdBy], references: [id])
+  roleViews  DiagramRoleView[]
+  testCases  TestCase[]        @relation("DiagramTestCases")
+}
+
+model DiagramRoleView {
+  id         Int         @id
+  diagramId  Int
+  userId     Int
+  nodeId     String
+  screenName String
+  roleIds    String[]     // ✅ nhiều role cùng xem node
+  visibility VisibilityType @default(ROLE_BASED) // dùng enum sẵn có
+
+  diagram    BpmnDiagram @relation(fields: [diagramId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+
+  @@unique([diagramId, userId, nodeId])
+}
+
+model TestCase {
+  id        Int          @id
+  name      String
+  createdAt DateTime     @default(now())
+  diagramId Int?
+  description String?
+  createdBy Int
+  creator   User         @relation("TestCaseCreatedBy", fields: [createdBy], references: [id])
+  diagram   BpmnDiagram? @relation("DiagramTestCases", fields: [diagramId], references: [id])
+  type        VisibilityType
+
+  poData  POTestCaseData[]
+  devData DevTestCaseData[]
+  QCData  QCTestCaseData[]
+}
+
+model POTestCaseData {
+  id          Int      @id
+  testCaseId  Int
+  nodeId      String?   // 👈 thêm field nodeId
+  description String
+  attachments String[]
+  roleId      Int?     // optional
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id])
+  role     Role?    @relation(fields: [roleId], references: [id])
+
+  @@unique([testCaseId, nodeId]) // 👈 đảm bảo mỗi node trong test case chỉ có 1 dòng
+}
+
+model DevTestCaseData {
+  id         Int      @id
+  testCaseId Int
+  nodeId     String?
+  apis       Json
+  roleId     Int?
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id])
+  role     Role?    @relation(fields: [roleId], references: [id])
+
+  @@unique([testCaseId, nodeId])
+}
+
+model QCTestCaseData {
+  id          Int      @id
+  testCaseId  Int
+  nodeId      String?   // 👈 thêm
+  roleId      Int?
+  apis        Json
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id])
+  role     Role?    @relation(fields: [roleId], references: [id])
+
+  @@unique([testCaseId, nodeId]) // 👈 tương tự
+}
+
+enum VisibilityType {
+  GENERAL
+  ROLE_BASED
+}

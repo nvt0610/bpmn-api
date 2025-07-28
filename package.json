@@ -1,0 +1,30 @@
+{
+  "name": "express_api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon server",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "parcel public/index.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@bpmn-io/properties-panel": "^3.30.2",
+    "@prisma/client": "^6.12.0",
+    "bpmn-js": "^18.6.2",
+    "bpmn-js-properties-panel": "^5.38.1",
+    "camunda-bpmn-moddle": "^7.0.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "nodemon": "^3.1.10",
+    "parcel": "^2.15.4",
+    "prisma": "^6.12.0",
+    "vite": "^7.0.6"
+  }
+}
