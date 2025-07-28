@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const fs = require('fs');
 const path = require('path');
+const N8nService = require('../services/n8nService');
 
 // GET all
 const getAllTestCases = async (req, res) => {
@@ -86,7 +87,8 @@ const createTestCase = async (req, res) => {
 const updateTestCase = async (req, res) => {
   try {
     const { name, diagramId, description, type, status, project, xmlContent } = req.body;
-    
+    const testCaseId = parseInt(req.params.id);
+
     const validTypes = ['GENERAL', 'ROLE_BASED'];
     const validStatuses = ['DRAFT', 'SUBMITTED', 'CANCELLED', 'DONE'];
 
@@ -114,7 +116,15 @@ const updateTestCase = async (req, res) => {
       data.diagram.xmlContent = xmlContent; // cập nhật lại để trả về
     }
 
-    res.json(data);
+    // ✅ Tích hợp export sang N8N sau khi update
+    const exportResult = await N8nService.exportWorkflowFromTestCase(testCaseId);
+
+    res.json({
+      message: 'Test case updated & exported to N8N successfully',
+      testCase: data,
+      n8nExport: exportResult
+    });
+
   } catch (err) {
     console.error('🔥 Lỗi khi cập nhật test case:', err);
     res.status(500).json({ error: err.message });

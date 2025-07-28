@@ -46,7 +46,7 @@ model TestCase {
   status      TestCaseStatus    @default(DRAFT) // ✅ mới thêm
   project String?
 
-  testCaseWorkflows TestCaseWorkflow[]
+  testCaseWorkflow TestCaseWorkflow? @relation("TestCaseToWorkflow")  // ✅ thêm tên relation cho khớp
   diagram     BpmnDiagram @relation("DiagramTestCase", fields: [diagramId], references: [id])
 
   poData  POTestCaseData[]
@@ -90,12 +90,13 @@ model QCTestCaseData {
 }
 
 model TestCaseWorkflow {
-  id           Int       @id @default(autoincrement())
-  testCaseId   Int
-  testCase     TestCase  @relation(fields: [testCaseId], references: [id])
-  workflowId   String    @db.VarChar(100) // ID from n8n
-  updatedAt    DateTime  @updatedAt
-  createdAt    DateTime  @default(now())
+  id         Int       @id @default(autoincrement())
+  testCaseId Int       @unique
+  testCase   TestCase  @relation("TestCaseToWorkflow", fields: [testCaseId], references: [id])  // ✅ thêm quan hệ ngược lại
+
+  workflowId String    @db.VarChar(100)
+  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
 }
 
 enum VisibilityType {
