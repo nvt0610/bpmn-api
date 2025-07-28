@@ -22,7 +22,7 @@ app.use(express.static('public'));
 // API routes (chuẩn RESTful prefix /api/)
 app.use('/api/diagrams', diagramRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/testcases', testCaseRoutes);
+app.use('/api/testcases', testCaseRoutes, diagramRoutes);
 app.use('/api/screens', screenRoutes);
 app.use('/draw', diagramRoutes); // hoặc /editor nếu bạn muốn
 app.use('/api/extra', extraTestCaseDataRoutes);

@@ -6,11 +6,7 @@ const getAllDiagrams = async (req, res) => {
     const data = await prisma.bpmnDiagram.findMany({
       orderBy: { id: 'asc' },
       include: {
-        roleViews: true,
-        testCases: true,
-        creator: {
-          select: { id: true, username: true, email: true }
-        }
+        testCase: true,
       }
     });
     res.json(data);
@@ -28,24 +24,7 @@ const getDiagramById = async (req, res) => {
     const data = await prisma.bpmnDiagram.findUnique({
       where: { id: diagramId },
       include: {
-        roleViews: {
-          where: userId && roleId
-            ? {
-                OR: [
-                  { visibility: 'GENERAL' },
-                  {
-                    visibility: 'ROLE_BASED',
-                    roleIds: { has: roleId }
-                  },
-                  { userId: userId }
-                ]
-              }
-            : undefined
-        },
-        testCases: true,
-        creator: {
-          select: { id: true, username: true, email: true }
-        }
+        testCase: true,
       }
     });
 
@@ -59,9 +38,9 @@ const getDiagramById = async (req, res) => {
 
 const createDiagram = async (req, res) => {
   try {
-    const { name, xmlContent, type, createdBy } = req.body;
+    const { name, xmlContent, type, jsonContent } = req.body;
 
-    if (!name || !xmlContent || !type || !createdBy) {
+    if (!name || !xmlContent || !type) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -70,12 +49,22 @@ const createDiagram = async (req, res) => {
       return res.status(400).json({ error: 'Invalid diagram type' });
     }
 
+    // Tạo diagram trước
+    const diagram = await prisma.bpmnDiagram.create({
+      data: {
+        name,
+        xmlContent,
+        type,
+        jsonContent: jsonContent || {}
+      }
+    });
+
     const data = await prisma.bpmnDiagram.create({
       data: {
         name,
         xmlContent,
         type,
-        createdBy
+        jsonContent: jsonContent || null,
       }
     });
 
@@ -87,11 +76,11 @@ const createDiagram = async (req, res) => {
 
 const updateDiagram = async (req, res) => {
   try {
-    const { name, xmlContent, type } = req.body;
+    const { name, xmlContent, type, jsonContent } = req.body;
 
     const data = await prisma.bpmnDiagram.update({
       where: { id: parseInt(req.params.id) },
-      data: { name, xmlContent, type }
+      data: { name, xmlContent, type, jsonContent }
     });
 
     res.json(data);

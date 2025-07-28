@@ -6,7 +6,7 @@ const testCaseController = require('../controllers/testCaseController');
 router.get('/', testCaseController.getAllTestCases);
 router.get('/:id', testCaseController.getTestCaseById);
 router.post('/', testCaseController.createTestCase);
-router.put('/:id', testCaseController.updateTestCase);
 router.delete('/:id', testCaseController.deleteTestCase);
+router.patch('/:id', testCaseController.updateTestCase);
 
 module.exports = router;

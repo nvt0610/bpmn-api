@@ -13,9 +13,7 @@ model User {
   email            String             @unique
   password         String
   roleId           Int
-  createdDiagrams  BpmnDiagram[]      @relation("DiagramCreatedBy")
-  diagrams         DiagramRoleView[]
-  createdTestCases TestCase[]         @relation("TestCaseCreatedBy")
+
   role             Role               @relation(fields: [roleId], references: [id])
 }
 
@@ -32,41 +30,24 @@ model BpmnDiagram {
   id         Int               @id @default(autoincrement())
   name       String
   xmlContent String
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  createdBy  Int
   type       VisibilityType
-  creator    User              @relation("DiagramCreatedBy", fields: [createdBy], references: [id])
-  roleViews  DiagramRoleView[]
-  testCases  TestCase[]        @relation("DiagramTestCases")
-}
+  jsonContent Json?
 
-model DiagramRoleView {
-  id         Int         @id @default(autoincrement())
-  diagramId  Int
-  userId     Int
-  nodeId     String
-  screenName String
-  roleIds    String[]     // ✅ nhiều role cùng xem node
-  visibility VisibilityType @default(ROLE_BASED) // dùng enum sẵn có
-
-  diagram    BpmnDiagram @relation(fields: [diagramId], references: [id])
-  user       User        @relation(fields: [userId], references: [id])
-
-  @@unique([diagramId, userId, nodeId])
+  testCase    TestCase[]  @relation("DiagramTestCase") // 👈 chỉ 1 test case
 }
 
 model TestCase {
   id        Int          @id @default(autoincrement())
   name      String
-  createdAt DateTime     @default(now())
-  diagramId Int?
   description String?
-  createdBy Int
-  creator   User         @relation("TestCaseCreatedBy", fields: [createdBy], references: [id])
-  diagram   BpmnDiagram? @relation("DiagramTestCases", fields: [diagramId], references: [id])
+  createdAt   DateTime   @default(now())
+  diagramId Int
   type        VisibilityType
   status      TestCaseStatus    @default(DRAFT) // ✅ mới thêm
+  project String?
+
+  testCaseWorkflows TestCaseWorkflow[]
+  diagram     BpmnDiagram @relation("DiagramTestCase", fields: [diagramId], references: [id])
 
   poData  POTestCaseData[]
   devData DevTestCaseData[]
@@ -76,7 +57,7 @@ model TestCase {
 model POTestCaseData {
   id          Int      @id @default(autoincrement())
   testCaseId  Int
-  nodeId      String?   // 👈 thêm field nodeId
+  nodeData   Json?     // 👈 chứa tất cả: nodeId + apis + input + expected
   description String
   attachments String[]
   roleId      Int?     // optional
@@ -84,33 +65,37 @@ model POTestCaseData {
   testCase TestCase @relation(fields: [testCaseId], references: [id])
   role     Role?    @relation(fields: [roleId], references: [id])
 
-  @@unique([testCaseId, nodeId]) // 👈 đảm bảo mỗi node trong test case chỉ có 1 dòng
 }
 
 model DevTestCaseData {
   id         Int      @id @default(autoincrement())
   testCaseId Int
-  nodeId     String?
-  apis       Json
+  nodeData   Json?     // 👈 chứa tất cả: nodeId + apis + input + expected
   roleId     Int?
 
   testCase TestCase @relation(fields: [testCaseId], references: [id])
   role     Role?    @relation(fields: [roleId], references: [id])
 
-  @@unique([testCaseId, nodeId])
 }
 
 model QCTestCaseData {
   id          Int      @id @default(autoincrement())
   testCaseId  Int
-  nodeId      String?   // 👈 thêm
+  nodeData   Json?     // 👈 chứa tất cả: nodeId + apis + input + expected
   roleId      Int?
-  scenarios        Json
 
   testCase TestCase @relation(fields: [testCaseId], references: [id])
   role     Role?    @relation(fields: [roleId], references: [id])
 
-  @@unique([testCaseId, nodeId]) // 👈 tương tự
+}
+
+model TestCaseWorkflow {
+  id           Int       @id @default(autoincrement())
+  testCaseId   Int
+  testCase     TestCase  @relation(fields: [testCaseId], references: [id])
+  workflowId   String    @db.VarChar(100) // ID from n8n
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
 }
 
 enum VisibilityType {

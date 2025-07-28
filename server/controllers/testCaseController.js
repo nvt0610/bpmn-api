@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const fs = require('fs');
+const path = require('path');
 
 // GET all
 const getAllTestCases = async (req, res) => {
@@ -7,7 +9,6 @@ const getAllTestCases = async (req, res) => {
     orderBy: { id: 'asc' },
     include: {
       diagram: true,
-      creator: { select: { id: true, username: true } }
     }
   });
   res.json(data);
@@ -20,7 +21,6 @@ const getTestCaseById = async (req, res) => {
       where: { id: parseInt(req.params.id) },
       include: {
         diagram: true,
-        creator: { select: { id: true, username: true } }
       }
     });
     if (!data) return res.status(404).json({ message: 'Not found' });
@@ -33,54 +33,86 @@ const getTestCaseById = async (req, res) => {
 // POST create
 const createTestCase = async (req, res) => {
   try {
-    const { name, description, diagramId, createdBy, type, status } = req.body;
+    const { name, description, diagramId, type, status, project } = req.body;
 
-    if (!createdBy) return res.status(400).json({ error: 'Missing createdBy' });
-
-    const validTypes = ['GENERAL', 'ROLE_BASED'];
+    const finalType = ['GENERAL', 'ROLE_BASED'].includes(type) ? type : 'GENERAL';
     const validStatuses = ['DRAFT', 'SUBMITTED', 'CANCELLED', 'DONE'];
-
-    const finalType = validTypes.includes(type) ? type : 'GENERAL';
     const finalStatus = validStatuses.includes(status) ? status : 'DRAFT';
 
-    const data = await prisma.testCase.create({
+    let assignedDiagramId = diagramId;
+
+    if (!diagramId) {
+      const xmlContent = fs.readFileSync(
+        path.join(__dirname, '../resources/newDiagram.bpmn'),
+        'utf8'
+      );
+
+      let newDiagram = await prisma.bpmnDiagram.create({
+        data: {
+          name,
+          xmlContent,
+          type: finalType,
+          jsonContent: {}
+        }
+      });
+
+      assignedDiagramId = newDiagram.id;
+      console.log(`🛠️ Auto-created diagram for test case '${name}' → diagram '${newDiagram.name}' (ID: ${newDiagram.id})`);
+    }
+
+    const testCase = await prisma.testCase.create({
       data: {
         name,
         description,
-        diagramId,
-        createdBy,
+        diagramId: assignedDiagramId,
         type: finalType,
-        status: finalStatus
+        status: finalStatus,
+        project
       }
     });
-    res.json(data);
+
+    res.json({
+      message: '✅ Test case created successfully',
+      testCase,
+      note: diagramId ? undefined : `ℹ️ Auto-created diagram '${name}' from default template`
+    });
   } catch (err) {
-    console.error('🔥 Lỗi khi tạo test case:', err); // 👈 BẮT BUỘC THÊM DÒNG NÀY
+    console.error('🔥 Lỗi khi tạo test case:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// PUT update
+//UPDATE
 const updateTestCase = async (req, res) => {
   try {
-    const { name, diagramId, description, type, status } = req.body;
-
+    const { name, diagramId, description, type, status, project, xmlContent } = req.body;
+    
     const validTypes = ['GENERAL', 'ROLE_BASED'];
     const validStatuses = ['DRAFT', 'SUBMITTED', 'CANCELLED', 'DONE'];
 
     const finalType = validTypes.includes(type) ? type : undefined;
     const finalStatus = validStatuses.includes(status) ? status : undefined;
 
+    // Update test case
     const data = await prisma.testCase.update({
       where: { id: parseInt(req.params.id) },
       data: {
-        name,
-        diagramId,
-        description,
+        ...(name && { name }),
+        ...(diagramId && { diagramId }),
+        ...(description && { description }),
+        ...(project && { project }),
         ...(finalType && { type: finalType }),
         ...(finalStatus && { status: finalStatus })
-      }
+      },
+      include: { diagram: true }
     });
+    if (xmlContent) {
+      await prisma.bpmnDiagram.update({
+        where: { id: data.diagramId },
+        data: { xmlContent }
+      });
+      data.diagram.xmlContent = xmlContent; // cập nhật lại để trả về
+    }
 
     res.json(data);
   } catch (err) {

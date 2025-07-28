@@ -21,51 +21,55 @@ const resolveRoleInfo = async (rawRole) => {
 const modelMap = {
   po: {
     model: prisma.pOTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'description', 'attachments', 'roleId'],
-    updateFields: ['description', 'attachments', 'nodeId'],
+    createFields: ['testCaseId', 'nodeData', 'description', 'attachments', 'roleId'],
+    updateFields: ['nodeData', 'description', 'attachments'],
     validators: {
+      nodeData: Array.isArray,
       attachments: Array.isArray,
       description: (val) => typeof val === 'string'
     }
   },
   dev: {
     model: prisma.devTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'apis', 'roleId'],
-    updateFields: ['apis', 'nodeId'],
+    createFields: ['testCaseId', 'nodeData', 'roleId'],
+    updateFields: ['nodeData'],
     validators: {
-      apis: (val) => typeof val === 'object'
+      nodeData: Array.isArray
     }
   },
   qc: {
     model: prisma.qCTestCaseData,
-    createFields: ['testCaseId', 'nodeId', 'scenarios', 'roleId'],
-    updateFields: ['scenarios', 'nodeId'],
+    createFields: ['testCaseId', 'nodeData', 'roleId'],
+    updateFields: ['nodeData'],
     validators: {
-      scenarios: (val) => typeof val === 'object' || Array.isArray(val)
+      nodeData: Array.isArray
     }
   }
 };
 
-// CREATE chung
 const createExtra = async (req, res) => {
   const role = req.params.role;
+  const testCaseId = parseInt(req.body.testCaseId);
+
   const resolved = await resolveRoleInfo(role);
   if (!resolved) return res.status(400).json({ error: `Invalid role "${role}"` });
 
   const config = modelMap[resolved.name];
   if (!config) return res.status(400).json({ error: 'Unsupported role' });
 
-  const dataInput = {};
+  // ✅ Bỏ cần truyền testCaseId và roleId từ body, tự gán
+  const dataInput = {
+    testCaseId,
+    roleId: resolved.id
+  };
+
   for (const field of config.createFields) {
+    if (field === 'testCaseId' || field === 'roleId') continue; // ✅ bỏ qua, đã tự gán ở trên
     const value = req.body[field];
     if (config.validators?.[field] && !config.validators[field](value)) {
       return res.status(400).json({ error: `Invalid value for field: ${field}` });
     }
     dataInput[field] = value;
-  }
-
-  if (!('roleId' in dataInput) || dataInput.roleId == null) {
-    dataInput.roleId = resolved.id;
   }
 
   try {
@@ -75,6 +79,7 @@ const createExtra = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // UPDATE chung
 const updateExtra = async (req, res) => {
@@ -162,7 +167,12 @@ const getExtrasByTestCase = async (req, res) => {
       prisma.devTestCaseData.findMany({ where: { testCaseId } }),
       prisma.qCTestCaseData.findMany({ where: { testCaseId } })
     ]);
-    res.json({ testCaseId, po, dev, qc });
+    res.json({
+      testCaseId,
+      po: po.map(({ nodeData, ...rest }) => ({ nodeData, ...rest })),
+      dev: dev.map(({ nodeData, ...rest }) => ({ nodeData, ...rest })),
+      qc: qc.map(({ nodeData, ...rest }) => ({ nodeData, ...rest }))
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -184,9 +194,6 @@ const getExtrasByRole = async (req, res) => {
       const config = modelMap[name];
       if (!config) continue;
       const whereClause = { testCaseId };
-      if (req.query.nodeId) {
-        whereClause.nodeId = req.query.nodeId;
-      }
       const data = await config.model.findMany({ where: whereClause }); roleData[name] = data;
     }
 
