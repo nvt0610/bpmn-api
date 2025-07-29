@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
 const prisma = new PrismaClient();
-const N8nService = require('../services/N8nService');
+const N8nService = require('../services/n8nService');
 
 
 const N8nController = {

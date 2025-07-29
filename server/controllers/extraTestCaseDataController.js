@@ -24,8 +24,8 @@ const modelMap = {
     createFields: ['testCaseId', 'nodeData', 'description', 'attachments', 'roleId'],
     updateFields: ['nodeData', 'description', 'attachments'],
     validators: {
-      nodeData: Array.isArray,
-      attachments: Array.isArray,
+      nodeData: (val) => val === undefined || Array.isArray(val),
+      attachments: (val) => val === undefined || Array.isArray(val),
       description: (val) => typeof val === 'string'
     }
   },
